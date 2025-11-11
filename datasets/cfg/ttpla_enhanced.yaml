@@ -1,0 +1,9 @@
+path: ttpla_enhanced  # 数据集根目录
+train: images/train  # 训练集图片 (相对于 'path')
+val: images/val  # 验证集图片 (相对于 'path')
+test: images/test # 测试集图片 (可选, 相对于 'path')
+
+# 类别信息
+names:
+  0: cable
+  1: TrafficLine

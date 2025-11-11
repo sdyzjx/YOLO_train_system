@@ -1,0 +1,4 @@
+modules/ultralytics/
+runs/train/
+runs/val/
+datasets/ttpla_enhanced
