@@ -1,0 +1,45 @@
+# Ultralytics YOLOv8x-OBB 专用配置（展开 head C2f，保持通道一致）
+
+nc: 80
+depth_multiple: 1.0
+width_multiple: 1.0
+
+backbone:
+  # [from, repeats, module, args]
+  - [-1, 1, Conv, [80, 3, 2]]        # 0-P1/2
+  - [-1, 1, Conv, [160, 3, 2]]       # 1-P2/4
+  - [-1, 3, C2f, [160, True]]        # 2
+  - [-1, 1, Conv, [320, 3, 2]]       # 3-P3/8
+  - [-1, 6, C2f, [320, True]]        # 4
+  - [-1, 1, Conv, [640, 3, 2]]       # 5-P4/16
+  - [-1, 6, C2f, [640, True]]        # 6
+  - [-1, 1, Conv, [640, 3, 2]]       # 7-P5/32
+  - [-1, 3, C2f, [640, True]]        # 8
+  - [-1, 1, SPPF, [640, 5]]          # 9
+
+head:
+  - [-1, 1, nn.Upsample, [None, 2, 'nearest']]  # 10
+  - [[-1, 6], 1, Concat, [1]]                   # 11, cat backbone P4
+  - [-1, 1, C2f, [640]]                         # 12, P4 block 1
+  - [-1, 1, C2f, [640]]                         # 13, P4 block 2
+  - [-1, 1, C2f, [640]]                         # 14, P4 block 3
+
+  - [-1, 1, nn.Upsample, [None, 2, 'nearest']]  # 15
+  - [[-1, 4], 1, Concat, [1]]                   # 16, cat backbone P3
+  - [-1, 1, C2f, [320]]                         # 17, P3 block 1
+  - [-1, 1, C2f, [320]]                         # 18, P3 block 2
+  - [-1, 1, C2f, [320]]                         # 19, P3 block 3 (P3/8)
+
+  - [-1, 1, Conv, [320, 3, 2]]                  # 20, downsample -> P4
+  - [[-1, 14], 1, Concat, [1]]                  # 21, cat head P4
+  - [-1, 1, C2f, [640]]                         # 22, mid P4 block 1
+  - [-1, 1, C2f, [640]]                         # 23, mid P4 block 2
+  - [-1, 1, C2f, [640]]                         # 24, mid P4 block 3 (P4/16)
+
+  - [-1, 1, Conv, [640, 3, 2]]                  # 25, downsample -> P5
+  - [[-1, 9], 1, Concat, [1]]                   # 26, cat head P5
+  - [-1, 1, C2f, [640]]                         # 27, P5 block 1
+  - [-1, 1, C2f, [640]]                         # 28, P5 block 2
+  - [-1, 1, C2f, [640]]                         # 29, P5 block 3 (P5/32)
+
+  - [[19, 24, 29], 1, OBB, [nc, 1]]             # 30, OBB(P3, P4, P5)

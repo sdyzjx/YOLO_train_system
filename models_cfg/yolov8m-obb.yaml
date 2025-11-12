@@ -1,0 +1,41 @@
+# Ultralytics YOLOv8m-OBB 专用配置（修正 head C2f 重复导致的通道不匹配）
+
+nc: 80  # 默认类别数，可在命令行覆盖
+depth_multiple: 1.0
+width_multiple: 1.0
+
+backbone:
+  # [from, repeats, module, args]
+  - [-1, 1, Conv, [48, 3, 2]]        # 0-P1/2
+  - [-1, 1, Conv, [96, 3, 2]]        # 1-P2/4
+  - [-1, 2, C2f, [96, True]]         # 2
+  - [-1, 1, Conv, [192, 3, 2]]       # 3-P3/8
+  - [-1, 4, C2f, [192, True]]        # 4
+  - [-1, 1, Conv, [384, 3, 2]]       # 5-P4/16
+  - [-1, 4, C2f, [384, True]]        # 6
+  - [-1, 1, Conv, [576, 3, 2]]       # 7-P5/32
+  - [-1, 2, C2f, [576, True]]        # 8
+  - [-1, 1, SPPF, [576, 5]]          # 9
+
+head:
+  - [-1, 1, nn.Upsample, [None, 2, 'nearest']]  # 10
+  - [[-1, 6], 1, Concat, [1]]                   # 11, cat backbone P4
+  - [-1, 1, C2f, [384]]                         # 12, first P4 block，降通道
+  - [-1, 1, C2f, [384]]                         # 13, second P4 block（保持通道）
+
+  - [-1, 1, nn.Upsample, [None, 2, 'nearest']]  # 14
+  - [[-1, 4], 1, Concat, [1]]                   # 15, cat backbone P3
+  - [-1, 1, C2f, [192]]                         # 16, first P3 block
+  - [-1, 1, C2f, [192]]                         # 17, second P3 block (P3/8 small head)
+
+  - [-1, 1, Conv, [192, 3, 2]]                  # 18, downsample回到P4
+  - [[-1, 13], 1, Concat, [1]]                  # 19, cat head P4
+  - [-1, 1, C2f, [384]]                         # 20, first P4 block
+  - [-1, 1, C2f, [384]]                         # 21, second P4 block (P4/16)
+
+  - [-1, 1, Conv, [384, 3, 2]]                  # 22, downsample到P5
+  - [[-1, 9], 1, Concat, [1]]                   # 23, cat head P5
+  - [-1, 1, C2f, [576]]                         # 24, first P5 block
+  - [-1, 1, C2f, [576]]                         # 25, second P5 block (P5/32)
+
+  - [[17, 21, 25], 1, OBB, [nc, 1]]             # 26, OBB(P3, P4, P5)
